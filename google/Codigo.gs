@@ -233,14 +233,14 @@ function tabla_(h, fila, col, cab, filas, formatos, ancho) {
     .setBorder(false, false, true, false, false, false, C_.linea, SpreadsheetApp.BorderStyle.SOLID);
   if (!filas.length) { h.getRange(fila + 1, col).setValue('Todavía no hay datos').setFontColor(C_.gris).setFontStyle('italic'); h.getRange(fila + 1, col, 1, ancho).setBackground(C_.blanco); return 1; }
   var r = h.getRange(fila + 1, col, filas.length, ancho);
-  var vals = filas.map(function (f) { return f.map(function (v) { return typeof v === 'string' && v.charAt(0) === '=' ? '' : v; }); });
+  var vals = filas.map(function (f) { return f.map(function (v) { return v && typeof v === 'object' ? v.bar : v; }); });
   r.setValues(vals).setBackground(C_.blanco).setFontColor(C_.tinta).setFontSize(10)
     .setBorder(false, false, true, false, false, true, C_.pista, SpreadsheetApp.BorderStyle.SOLID);
-  filas.forEach(function (f, i) { f.forEach(function (v, j) { if (typeof v === 'string' && v.charAt(0) === '=') h.getRange(fila + 1 + i, col + j).setFormula(v); }); });
+  filas.forEach(function (f, i) { f.forEach(function (v, j) { if (v && typeof v === 'object') h.getRange(fila + 1 + i, col + j).setFontColor(v.color).setFontFamily('Roboto Mono').setFontSize(9); }); });
   (formatos || []).forEach(function (fm, j) { if (fm) h.getRange(fila + 1, col + j, filas.length, 1).setNumberFormat(fm).setHorizontalAlignment('right'); });
   return filas.length;
 }
-function barra_(f, color) { return '=SPARKLINE(' + Math.max(0, Math.min(1, f)) + ',{"charttype","bar";"max",1;"color1","' + color + '";"empty","zero"})'; }
+function barra_(f, color) { var n = Math.round(Math.max(0, Math.min(1, f)) * 10); return { bar: new Array(n + 1).join('█') + new Array(11 - n).join('░') + '  ' + Math.round(f * 100) + ' %', color: color }; }
 function tarjeta_(h, rango, etiqueta, valor, nota, colorValor) {
   var r = h.getRange(rango), f = r.getRow(), c = r.getColumn(), w = r.getNumColumns();
   r.setBackground(C_.blanco);

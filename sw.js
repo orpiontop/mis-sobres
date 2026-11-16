@@ -1,5 +1,5 @@
 /* Mis sobres: guarda la app en el dispositivo para que abra sin conexión. */
-var CACHE = "mis-sobres-v1";
+var CACHE = "mis-sobres-v2";
 var ARCHIVOS = [
   "./", "index.html", "app.js", "manifest.webmanifest",
   "icon-180.png", "icon-192.png", "icon-512.png",
@@ -8,7 +8,7 @@ var ARCHIVOS = [
 ];
 
 self.addEventListener("install", function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ARCHIVOS); }).then(function () { return self.skipWaiting(); }));
+  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ARCHIVOS.map(function (u) { return new Request(u, { cache: "reload" }); })); }).then(function () { return self.skipWaiting(); }));
 });
 
 self.addEventListener("activate", function (e) {

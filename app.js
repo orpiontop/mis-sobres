@@ -12,7 +12,8 @@ var S={sobres:[],movs:[],cfg:{inicio:null,cobro:425,rapidos:[]},cola:[],url:"",s
 /* ---------- fechas: el mes empieza el antepenúltimo día ---------- */
 function pad(n){return n<10?"0"+n:""+n;}
 function hoyStr(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
-function diaCobro(y,m){return new Date(y,m+1,0).getDate()-2;}
+/* Antepenúltimo día laborable (de lunes a viernes) del mes. */
+function diaCobro(y,m){var d=new Date(y,m+1,0).getDate(),n=0;for(;d>0;d--){var w=new Date(y,m,d).getDay();if(w!==0&&w!==6&&++n===3)return d;}return 1;}
 function idxAuto(str){var p=str.split("-"),y=+p[0],m=+p[1]-1,d=+p[2];return y*12+m-(d>=diaCobro(y,m)?0:1);}
 function inicioAuto(idx){var y=Math.floor(idx/12),m=idx%12;return y+"-"+pad(m+1)+"-"+pad(diaCobro(y,m));}
 function addDias(str,n){var p=str.split("-"),d=new Date(+p[0],+p[1]-1,+p[2]+n);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}

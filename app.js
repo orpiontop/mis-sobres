@@ -602,8 +602,8 @@ function abrirTr(modo,sobreId,destinoId){
   if(modo==="colchon"){
     var s=sobrePorId(sobreId),c=calc(s);
     $("trTitulo").textContent="Usar sobrante · "+s.nombre;
-    $("trNota").textContent="Tienes "+eur.format(c.colchon)+" sobrantes de "+s.nombre+". Lo que uses se suma a lo que te queda este mes.";
-    $("trSel").hidden=true;
+    $("trNota").textContent="Tienes "+eur.format(c.colchon)+" sobrantes de "+s.nombre+". Elige a qué sobre lo pasas para gastarlo este mes.";
+    $("trSel").hidden=false;$("trDeWrap").hidden=true;$("trA").value=s.id;
   }else if(modo==="cerrar"){
     var v=sobrePorId(sobreId),cv=calc(v);
     $("trTitulo").textContent="Cerrar · "+v.nombre;
@@ -638,7 +638,13 @@ function guardarTr(ev){
     var s=sobrePorId(S.trSobre),c=calc(s);
     var lim=r2(c.colchon+(S.editando&&S.editando.tipo==="colchon"&&S.editando.sobre===s.id?S.editando.importe:0));
     if(imp>lim){$("trErr").textContent="De sobrantes solo hay "+eur.format(lim)+".";return;}
-    cerrar("vTr");apuntar({tipo:"colchon",importe:imp,sobre:s.id,nota:"De sobrantes",fecha:hoyStr()});return;
+    var dest=$("trA").value||s.id;
+    if(dest===s.id||S.editando){cerrar("vTr");apuntar({tipo:"colchon",importe:imp,sobre:s.id,nota:"De sobrantes",fecha:hoyStr()});return;}
+    var f=hoyStr(),ts=Date.now();
+    cerrar("vTr");
+    hacerVarios([{t:"add",mov:{id:uid("m"),tipo:"colchon",importe:imp,sobre:s.id,sobreNombre:s.nombre,nota:"De sobrantes",etiqueta:"",fecha:f,ts:ts}},
+                 {t:"add",mov:{id:uid("m"),tipo:"traspaso",importe:imp,sobre:s.id,destino:dest,sobreNombre:s.nombre+" → "+nombreSobre(dest),nota:"Sobrante de "+s.nombre,etiqueta:"",fecha:f,ts:ts+1}}]);
+    toast("Pasados "+eur.format(imp)+" de sobrantes a "+nombreSobre(dest));return;
   }
   var de=$("trDe").value,a=$("trA").value;
   if(de===a){$("trErr").textContent="Elige dos sobres distintos.";return;}

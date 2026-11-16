@@ -58,7 +58,6 @@ h3{font-size:14px;font-weight:600}
 .top .lbl{font-size:14px;opacity:.85}
 .top .big{font-family:var(--display);font-weight:700;font-size:44px;line-height:1.05}
 .top .sub{font-size:14px;opacity:.9;display:flex;gap:12px;flex-wrap:wrap}
-.cobro{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.25);font-size:14px}
 .reprow{display:grid;grid-template-columns:1fr 90px;gap:8px;align-items:center}
 .sobrante{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}
 .rapidos{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
@@ -106,7 +105,9 @@ select,input[type=text],input[type=date]{border:1px solid var(--line);background
 .dock button{border:0;border-radius:14px;padding:16px 8px;font-family:var(--display);font-weight:600;font-size:16px;cursor:pointer}
 #bGasto{background:var(--ink);color:var(--bg)}
 #bMover{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
-.botones{display:grid;gap:8px;min-width:160px;margin-left:auto}
+.topfila{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.topnum{display:flex;flex-direction:column;gap:6px}
+.botones{display:grid;gap:8px;width:150px}
 .botones button{width:100%;background:transparent;color:var(--accent-ink);border:1px solid currentColor;border-radius:10px;padding:9px 14px;font-family:var(--display);font-weight:600;font-size:14px;cursor:pointer}
 .botones #bCobrado.fuerte{background:var(--accent-ink);color:var(--accent);border-color:var(--accent-ink)}
 .veil{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
@@ -179,11 +180,12 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
 <body>
 <div class="wrap">
   <section class="top" aria-live="polite">
-    <span class="lbl">Te queda para gastar este mes</span>
-    <span class="big num" id="tTotal">—</span>
+    <div class="topfila">
+      <div class="topnum"><span class="lbl">Te queda para gastar este mes</span>
+        <span class="big num" id="tTotal">—</span></div>
+      <div class="botones" id="cobroBox"><button type="button" id="bIngreso">+ Dinero extra</button><button type="button" id="bCobrado" hidden>He cobrado</button></div>
+    </div>
     <span class="sub"><span id="tCobro"></span><span id="tDia"></span><span id="tAhorro"></span><span id="tDeuda"></span></span>
-    <div class="cobro" id="cobroBox"><span id="cobroTxt"></span>
-      <div class="botones"><button type="button" id="bIngreso">+ Dinero extra</button><button type="button" id="bCobrado" hidden>He cobrado</button></div></div>
   </section>
   <div class="rapidos" id="lRapidos" aria-label="Gastos rápidos"></div>
   <div id="status" class="note" role="status"></div>

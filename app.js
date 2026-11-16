@@ -244,13 +244,12 @@ function pintarCobro(){
   if(!c[k+1]&&hoy>=addDias(prox,-6)){txt="¿Ya te ha llegado el sueldo?";S.cobroKey=k+1;}
   else if(!c[k]&&hoy>=actual&&hoy<=addDias(actual,6)&&k>primero()){txt="El mes empezó solo el "+corto(actual)+". ¿Te ha llegado ya el sueldo?";S.cobroKey=k;}
   else if(hoy>addDias(inicioDe(k),10)){txt="¿Te han pagado antes de tiempo?";S.cobroKey=k+1;S.cobroConfirmar=true;suave=true;}
-  $("bCobrado").hidden=!txt;$("bCobrado").classList.toggle("fuerte",!!txt&&!suave);$("cobroTxt").textContent=txt;$("bCobrado").textContent="He cobrado";S.cobroArmado=false;
+  $("bCobrado").hidden=!txt;$("bCobrado").classList.toggle("fuerte",!!txt&&!suave);$("bCobrado").textContent="He cobrado";S.cobroArmado=false;
 }
 function heCobrado(){
   if(S.cobroKey==null)return;
   if(S.cobroConfirmar&&!S.cobroArmado){
-    S.cobroArmado=true;$("bCobrado").textContent="Sí, empezar el mes hoy";
-    $("cobroTxt").textContent="Faltan "+diasHasta(inicioAuto(ahora()+1))+" días para tu día de cobro. ¿Seguro?";
+    S.cobroArmado=true;$("bCobrado").textContent="¿Seguro? Faltan "+diasHasta(inicioAuto(ahora()+1))+" días";
     setTimeout(function(){if(S.cobroArmado)pintarCobro();},6000);return;
   }
   var hoy=hoyStr(),key=S.cobroKey,c=JSON.parse(JSON.stringify(cobros())),antes=c[key];

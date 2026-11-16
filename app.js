@@ -7,7 +7,7 @@ var COLORES=[["c1","Azul"],["c2","Naranja"],["c3","Aguamarina"],["c4","Amarillo"
 var K="mis-sobres-app-v1",KT="mis-sobres-tema";
 var S={sobres:[],movs:[],cfg:{inicio:null,cobro:425,rapidos:[]},cola:[],url:"",sinc:0,
        tipo:"gasto",ultimo:null,ciclo:null,confirm:null,subiendo:false,fallo:false,
-       imp:{mov:"",tr:"",sal:""},fijosHechos:[],fijEdit:[],parteTocada:false,salPersona:"",trModo:"mover",trSobre:null,rapEdit:[]};
+       imp:{mov:"",tr:"",sal:""},editando:null,fijosHechos:[],fijEdit:[],parteTocada:false,salPersona:"",trModo:"mover",trSobre:null,rapEdit:[]};
 
 /* ---------- fechas: el mes empieza el antepenúltimo día ---------- */
 function pad(n){return n<10?"0"+n:""+n;}
@@ -264,7 +264,7 @@ function pintarRapidos(){
     var dt=el("span","dot");dt.style.background=color(s);b.appendChild(dt);
     b.appendChild(el("span",null,r.nombre));b.appendChild(el("b","num",eur.format(r.importe)));
     b.setAttribute("aria-label","Apuntar "+r.nombre+", "+eur.format(r.importe)+", sobre "+s.nombre);
-    b.addEventListener("click",function(){apuntar({tipo:"gasto",importe:r.importe,sobre:r.sobre,nota:r.nombre,etiqueta:r.etiqueta,fecha:hoyStr()});});
+    b.addEventListener("click",function(){S.editando=null;apuntar({tipo:"gasto",importe:r.importe,sobre:r.sobre,nota:r.nombre,etiqueta:r.etiqueta,fecha:hoyStr()});});
     box.appendChild(b);
   });
   box.hidden=!box.childNodes.length;
@@ -358,6 +358,9 @@ function pintarMovs(){
     var s=sobrePorId(m.sobre),dt=el("span","dot");dt.style.background=m.tipo==="saldo"?"var(--muted)":color(s);row.appendChild(dt);
     w.appendChild(el("b",null,d.tit));
     w.appendChild(el("span",null,corto(m.fecha)+" · "+d.sub));
+    w.setAttribute("role","button");w.tabIndex=0;w.setAttribute("aria-label","Modificar: "+d.tit+", "+d.q);
+    w.addEventListener("click",function(){editar(m);});
+    w.addEventListener("keydown",function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();editar(m);}});
     row.appendChild(w);
     row.appendChild(el("span","q num "+d.cls,d.q));
     var b=el("button","btn small"+(S.confirm===m.id?" danger":""),S.confirm===m.id?"¿Seguro?":"Borrar");b.type="button";
@@ -374,6 +377,37 @@ function toast(t,accion){
 }
 $("toastBtn").addEventListener("click",function(){var a=toastAccion;$("toast").classList.remove("on");toastAccion=null;if(a)a();});
 function cerrar(id){$(id).classList.remove("on");}
+/* ---------- modificar un movimiento ---------- */
+function editar(m){
+  var ex=m.extra||{};
+  if(m.tipo==="gasto"||m.tipo==="ingreso"){
+    abrirMov(m.tipo);
+    $("movTitulo").textContent=m.tipo==="gasto"?"Modificar gasto":"Modificar entrada";$("movOk").textContent="Guardar cambios";
+    var r=document.querySelector('input[name="sobre"][value="'+m.sobre+'"]');if(r){r.checked=true;pintarEtiq();}
+    if(m.etiqueta){var e=document.querySelector('input[name="etiq"][value="'+m.etiqueta.replace(/"/g,'')+'"]');if(e){e.checked=true;e.dataset.on="1";}}
+    $("fNota").value=m.nota;$("fFecha").value=m.fecha;
+    var imp=m.importe;
+    if(ex.comp&&ex.comp.persona){
+      $("fComp").checked=true;
+      document.querySelector('input[name="pago"][value="'+(ex.comp.pago==="yo"?"yo":"otro")+'"]').checked=true;
+      $("fPersona").value=(Array.isArray(ex.comp.personas)&&ex.comp.personas.length?ex.comp.personas:[ex.comp.persona]).join(", ");
+      if(ex.comp.pago==="yo"){imp=+ex.comp.total||m.importe;$("fParte").value=fmtImp(m.importe);S.parteTocada=true;}
+    }
+    S.imp.mov=fmtImp(imp);pintarPantalla("mov");
+  }else if(m.tipo==="traspaso"){
+    abrirTr("mover");$("trTitulo").textContent="Modificar movimiento de dinero";
+    $("trDe").value=m.sobre;$("trA").value=m.destino;S.imp.tr=fmtImp(m.importe);pintarPantalla("tr");
+  }else if(m.tipo==="colchon"){
+    if(!sobrePorId(m.sobre)){toast("Ese sobre ya no existe: bórralo y apúntalo de nuevo");return;}
+    abrirTr("colchon",m.sobre);$("trTitulo").textContent="Modificar uso del colchón";S.imp.tr=fmtImp(m.importe);pintarPantalla("tr");
+  }else if(m.tipo==="saldo"){
+    var c=cuentas().filter(function(x){return clavePersona(x.nombre)===clavePersona(ex.persona);})[0]||{nombre:ex.persona,saldo:0};
+    abrirSal(c);$("salTitulo").textContent="Modificar pago con "+ex.persona;
+    document.querySelector('input[name="dir"][value="'+(ex.dir==="pago"?"pago":"cobro")+'"]').checked=true;
+    S.imp.sal=fmtImp(m.importe);pintarPantalla("sal");
+  }else return;
+  S.editando=m;
+}
 
 /* ---------- teclado numérico ---------- */
 function montarTeclado(cual){
@@ -403,11 +437,22 @@ document.addEventListener("keydown",function(e){
 });
 
 /* ---------- apuntar ---------- */
+function fmtImp(n){return String(r2(n)).replace(".",",");}
+function nombreMov(mov){return mov.tipo==="saldo"?"Cuentas · "+mov.extra.persona:mov.tipo==="traspaso"?nombreSobre(mov.sobre)+" → "+nombreSobre(mov.destino):nombreSobre(mov.sobre);}
+function reemplazar(viejo,mov){
+  if(["traspaso","colchon","saldo"].indexOf(mov.tipo)>=0)mov.fecha=viejo.fecha;
+  var ex=viejo.extra||{};if(ex.fijo){mov.extra=mov.extra||{};mov.extra.fijo=ex.fijo;}
+  mov.id=uid("m");mov.ts=viejo.ts||Date.now();mov.sobreNombre=nombreMov(mov);
+  var pend=!S.subiendo&&S.cola.some(function(o){return o.t==="add"&&o.mov.id===viejo.id;});
+  if(pend){S.cola=S.cola.filter(function(o){return !(o.t==="add"&&o.mov.id===viejo.id);});S.movs=S.movs.filter(function(m){return m.id!==viejo.id;});hacerVarios([{t:"add",mov:mov}]);}
+  else hacerVarios([{t:"del",id:viejo.id},{t:"add",mov:mov}]);
+  toast("Cambios guardados");
+}
 function apuntar(mov){
+  if(S.editando){var v=S.editando;S.editando=null;reemplazar(v,mov);return;}
   var s=sobrePorId(mov.sobre),antes=s&&s.tipo==="gasto"?calc(s):null;
   mov.id=uid("m");mov.ts=Date.now();
-  mov.sobreNombre=mov.tipo==="traspaso"?nombreSobre(mov.sobre)+" → "+nombreSobre(mov.destino):nombreSobre(mov.sobre);
-  if(mov.tipo==="saldo")mov.sobreNombre="Cuentas · "+mov.extra.persona;
+  mov.sobreNombre=nombreMov(mov);
   if(mov.sobre)S.ultimo=mov.sobre;
   hacer({t:"add",mov:mov});
   var txt=mov.tipo==="gasto"?"Gasto apuntado":mov.tipo==="ingreso"?"Dinero añadido":mov.tipo==="colchon"?"Colchón usado":mov.tipo==="saldo"?"Cuentas actualizadas":"Dinero movido";
@@ -421,6 +466,7 @@ function apuntar(mov){
 }
 function abrirMov(tipo){
   if(!S.sobres.length){abrirAj();return;}
+  S.editando=null;$("movOk").textContent="Guardar";
   S.tipo=tipo;S.imp.mov="";pintarPantalla("mov");
   $("movTitulo").textContent=tipo==="gasto"?"Apuntar gasto":"Añadir dinero";
   $("movSobreLab").textContent=tipo==="gasto"?"¿De qué sobre?":"¿A qué sobre va?";
@@ -487,6 +533,7 @@ function pintarComp(){
 }
 function personasCampo(){var vistos={};return $("fPersona").value.split(",").map(function(x){return x.trim();}).filter(function(x){var k=clavePersona(x);if(!k||vistos[k])return false;vistos[k]=1;return true;}).slice(0,10);}
 function abrirSal(c){
+  S.editando=null;
   S.salPersona=c.nombre;S.imp.sal=String(Math.abs(c.saldo)).replace(".",",");pintarPantalla("sal");$("salErr").textContent="";
   $("salTitulo").textContent="Saldar con "+c.nombre;
   $("salNota").textContent=(c.saldo<0?"Le debes "+eur.format(-c.saldo)+".":"Te debe "+eur.format(c.saldo)+".")+" Esto no cuenta como gasto: ya lo apuntaste en su día.";
@@ -515,6 +562,7 @@ function borrar(id){
 /* ---------- mover dinero y usar colchón ---------- */
 function abrirTr(modo,sobreId,destinoId){
   if(S.sobres.length<1){abrirAj();return;}
+  S.editando=null;
   S.trModo=modo;S.trSobre=sobreId||null;S.imp.tr="";pintarPantalla("tr");$("trErr").textContent="";
   var de=$("trDe"),a=$("trA");de.textContent="";a.textContent="";
   var orden=porTipo("gasto").concat(porTipo("ahorro")).concat(porTipo("viaje"));
@@ -558,7 +606,8 @@ function guardarTr(ev){
   if(!(imp>0)){$("trErr").textContent="Escribe un importe mayor que 0.";return;}
   if(S.trModo==="colchon"){
     var s=sobrePorId(S.trSobre),c=calc(s);
-    if(imp>r2(c.colchon)){$("trErr").textContent="En el colchón solo hay "+eur.format(c.colchon)+".";return;}
+    var lim=r2(c.colchon+(S.editando&&S.editando.tipo==="colchon"&&S.editando.sobre===s.id?S.editando.importe:0));
+    if(imp>lim){$("trErr").textContent="En el colchón solo hay "+eur.format(lim)+".";return;}
     cerrar("vTr");apuntar({tipo:"colchon",importe:imp,sobre:s.id,nota:"Del colchón",fecha:hoyStr()});return;
   }
   var de=$("trDe").value,a=$("trA").value;
@@ -731,13 +780,13 @@ $("nTipo").addEventListener("change",tipoNuevo);
 $("aFijoAdd").addEventListener("click",function(){var g=porTipo("gasto");S.fijEdit.push({id:uid("f"),nombre:"",importe:"",sobre:g.length?g[0].id:"",dia:""});pintarFijEdit();});
 $("aBackup").addEventListener("click",descargarCopia);
 $("aRestore").addEventListener("change",function(){if(this.files&&this.files[0])restaurarCopia(this.files[0]);this.value="";});
-$("salCancel").addEventListener("click",function(){cerrar("vSal");});
+$("salCancel").addEventListener("click",function(){S.editando=null;cerrar("vSal");});
 $("bGasto").addEventListener("click",function(){abrirMov("gasto");});
 $("bIngreso").addEventListener("click",function(){abrirMov("ingreso");});
 $("bMover").addEventListener("click",function(){abrirTr("mover");});
 $("bAjustes").addEventListener("click",abrirAj);
-$("movCancel").addEventListener("click",function(){cerrar("vMov");});
-$("trCancel").addEventListener("click",function(){cerrar("vTr");});
+$("movCancel").addEventListener("click",function(){S.editando=null;cerrar("vMov");});
+$("trCancel").addEventListener("click",function(){S.editando=null;cerrar("vTr");});
 $("ajCancel").addEventListener("click",function(){cerrar("vAj");});
 $("formMov").addEventListener("submit",guardarMov);
 $("formTr").addEventListener("submit",guardarTr);

@@ -1,5 +1,5 @@
 /* Mis sobres: guarda la app en el dispositivo para que abra sin conexión. */
-var CACHE = "mis-sobres-v5";
+var CACHE = "mis-sobres-v6";
 var ARCHIVOS = [
   "./", "index.html", "app.js", "manifest.webmanifest",
   "icon-180.png", "icon-192.png", "icon-512.png",

@@ -85,6 +85,8 @@ h3{font-size:14px;font-weight:600}
 .mov:first-child{border-top:0}
 .mov .what{flex:1;min-width:0}
 .mov .what b{display:block;font-weight:600;overflow-wrap:anywhere}
+.mov .what{cursor:pointer;border-radius:8px}
+.mov .what:hover b{text-decoration:underline}
 .mov .what span{font-size:13px;color:var(--muted)}
 .mov .q{font-family:var(--display);font-weight:600;white-space:nowrap}
 .empty{padding:18px 14px;color:var(--muted);font-size:14px}
@@ -208,7 +210,7 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
         <button class="btn" type="button" id="bExportar">Exportar este resumen</button>
       </div>
       <div class="sec">
-        <div class="sechead"><h2>Movimientos</h2></div>
+        <div class="sechead"><h2>Movimientos</h2><span class="note">Toca uno para cambiarlo</span></div>
         <input id="fBuscar" type="search" placeholder="Buscar (ej.: gasolina, Álex, ropa)" aria-label="Buscar movimientos">
         <div class="movs" id="lMovs"></div>
       </div>

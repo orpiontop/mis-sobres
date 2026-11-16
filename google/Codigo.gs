@@ -1,7 +1,10 @@
 /**
  * Mis sobres: guarda en esta hoja lo que apuntas en la app.
- * Se pega en Extensiones > Apps Script y se implementa como "Aplicación web".
+ * Se pega en un proyecto de Apps Script (script.new) y se implementa como "Aplicación web".
  */
+/* Identificador de tu hoja de Google (está en su dirección, entre /d/ y /edit). */
+var HOJA_ID = 'PEGA_AQUI_EL_ID_DE_TU_HOJA';
+
 var HOJAS = { m: 'Movimientos', s: 'Sobres', c: 'Config' };
 var CAB = {
   m: ['id', 'fecha', 'tipo', 'importe', 'sobre', 'nota', 'sobreId', 'ts'],
@@ -10,7 +13,7 @@ var CAB = {
 };
 
 function hoja_(k) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SpreadsheetApp.openById(HOJA_ID);
   var h = ss.getSheetByName(HOJAS[k]);
   if (!h) {
     h = ss.insertSheet(HOJAS[k]);

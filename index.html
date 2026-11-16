@@ -127,6 +127,11 @@ select,input[type=text],input[type=date]{border:1px solid var(--line);background
 .persona{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .persona .quien{font-weight:600}
 .persona .cuanto{font-family:var(--display);font-weight:600;font-size:18px}
+#fBuscar{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 12px;width:100%}
+.exp{white-space:pre-wrap;font-family:var(--body);font-size:14px;line-height:1.5;margin:0;background:var(--bg);border-radius:12px;padding:12px;max-height:55vh;overflow:auto}
+.four{display:grid;grid-template-columns:1.3fr .7fr 1fr .6fr auto;gap:6px;align-items:center}
+.card.viaje{border-style:dashed;border-left-style:solid}
+@media print{body *{visibility:hidden}#vExp,#vExp *{visibility:visible}#vExp{position:absolute;inset:0;background:#fff;display:block}#vExp .acts{display:none}.exp{max-height:none;background:#fff;color:#000}}
 .err{color:var(--bad);font-size:14px;min-height:1.2em}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .three{display:grid;grid-template-columns:1.4fr .8fr 1fr auto;gap:8px;align-items:center}
@@ -182,6 +187,10 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
         <div class="sechead"><h2>Ahorro · imagin</h2></div>
         <div id="lAhorro" class="grid2"></div>
       </div>
+      <div class="sec" id="secViajes" hidden>
+        <div class="sechead"><h2>Viajes y planes</h2></div>
+        <div id="lViajes" class="sec"></div>
+      </div>
       <div class="sec" id="secCuentas" hidden>
         <div class="sechead"><h2>Cuentas con amigos</h2><span class="note" id="cuentasTotal"></span></div>
         <div id="lCuentas" class="sec"></div>
@@ -196,11 +205,11 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
           </div>
         </div>
         <div class="resumen" id="resumen"></div>
-        <div class="chart" id="cSobres"></div>
-        <div class="chart" id="cMeses"></div>
+        <button class="btn" type="button" id="bExportar">Exportar este resumen</button>
       </div>
       <div class="sec">
-        <h2>Movimientos</h2>
+        <div class="sechead"><h2>Movimientos</h2></div>
+        <input id="fBuscar" type="search" placeholder="Buscar (ej.: gasolina, Álex, ropa)" aria-label="Buscar movimientos">
         <div class="movs" id="lMovs"></div>
       </div>
     </div>
@@ -224,9 +233,9 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
     <div class="field"><span class="lab">¿Quién pagó?</span><div class="chips">
       <label><input type="radio" name="pago" value="yo" checked><span>Yo</span></label>
       <label><input type="radio" name="pago" value="otro"><span>Otra persona</span></label></div></div>
-    <div class="field"><label for="fPersona">¿Con quién?</label><input id="fPersona" type="text" maxlength="30" placeholder="Nombre" autocapitalize="words"><div class="chips" id="fPersChips"></div></div>
+    <div class="field"><label for="fPersona">¿Con quién? (varios: separa con comas)</label><input id="fPersona" type="text" maxlength="30" placeholder="Nombre" autocapitalize="words"><div class="chips" id="fPersChips"></div></div>
     <div class="field" id="parteWrap"><label for="fParte">Mi parte (€)</label>
-      <div class="partes"><input id="fParte" type="text" inputmode="decimal"><button class="btn small" type="button" data-parte="mitad">Mitad</button><button class="btn small" type="button" data-parte="nada">Nada</button><button class="btn small" type="button" data-parte="todo">Todo</button></div></div>
+      <div class="partes"><input id="fParte" type="text" inputmode="decimal"><button class="btn small" type="button" data-parte="mitad">Iguales</button><button class="btn small" type="button" data-parte="nada">Nada</button><button class="btn small" type="button" data-parte="todo">Todo</button></div></div>
     <p class="note" id="compNota" style="margin:0"></p>
   </div>
   <div class="field" id="fEtiqWrap" hidden><span class="lab">Etiqueta (opcional)</span><div class="chips" id="fEtiq"></div></div>
@@ -240,7 +249,7 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
   <h1 id="trTitulo">Mover dinero</h1>
   <p class="note" id="trNota" style="margin:0"></p>
   <div class="two" id="trSel">
-    <div class="field"><label for="trDe">Desde</label><select id="trDe"></select></div>
+    <div class="field" id="trDeWrap"><label for="trDe">Desde</label><select id="trDe"></select></div>
     <div class="field"><label for="trA">Hacia</label><select id="trA"></select></div>
   </div>
   <div class="field"><span class="lab" id="trImpLab">Importe (€)</span>
@@ -258,12 +267,22 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
   <div class="meta"><span id="aSuma"></span></div>
   <div class="field"><span class="lab">Añadir sobre nuevo</span>
     <div class="two"><input id="nNombre" type="text" placeholder="Nombre" maxlength="30" aria-label="Nombre del sobre nuevo"><input id="nMensual" type="text" inputmode="decimal" placeholder="€/mes" aria-label="Euros al mes del sobre nuevo"></div>
-    <select id="nTipo" aria-label="Tipo del sobre nuevo"><option value="gasto">Para gastar</option><option value="ahorro">Ahorro</option></select>
+    <select id="nTipo" aria-label="Tipo del sobre nuevo"><option value="gasto">Para gastar (cada mes)</option><option value="ahorro">Ahorro (cada mes)</option><option value="viaje">Viaje o plan (una vez)</option></select>
+    <div class="field" id="nFinWrap" hidden><label for="nFin">¿Hasta cuándo dura?</label><input id="nFin" type="date"></div>
+    <p class="note" id="nViajeNota" hidden style="margin:0">Pon el presupuesto en «€/mes». El dinero lo metes con «⇄ Mover» desde otro sobre o del ahorro.</p>
   </div>
   <h3>Gastos rápidos</h3>
   <p class="note" style="margin:0">Salen arriba en la pantalla principal. Un toque y queda apuntado.</p>
   <div id="aRapidos" class="sec"></div>
   <button class="btn" type="button" id="aRapAdd">+ Añadir gasto rápido</button>
+  <h3>Gastos fijos</h3>
+  <p class="note" style="margin:0">Se apuntan solos cada mes el día que pongas (suscripciones, móvil, bono…).</p>
+  <div id="aFijos" class="sec"></div>
+  <button class="btn" type="button" id="aFijoAdd">+ Añadir gasto fijo</button>
+  <h3>Copia de seguridad</h3>
+  <p class="note" style="margin:0">Guarda un archivo con todo. Restaurar añade lo que falte, sin borrar nada.</p>
+  <div class="two"><button class="btn" type="button" id="aBackup">Descargar copia</button><label class="btn" for="aRestore" style="text-align:center">Restaurar copia</label></div>
+  <input id="aRestore" type="file" accept=".json,application/json" class="sr">
   <h3>Apariencia</h3>
   <div class="field"><label for="aTema">Tema</label><select id="aTema"><option value="auto">Automático (como el móvil)</option><option value="claro">Claro</option><option value="oscuro">Oscuro</option></select></div>
   <h3>Conexión con Drive</h3>
@@ -286,8 +305,13 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
   <div class="acts"><button class="btn" type="button" id="salCancel">Cancelar</button><button class="btn primary" type="submit">Saldar</button></div>
 </form></div>
 
+<div class="veil" id="vExp"><div class="sheet" role="dialog" aria-labelledby="expTitulo">
+  <h1 id="expTitulo">Resumen</h1>
+  <pre class="exp" id="expTexto"></pre>
+  <div class="acts"><button class="btn" type="button" id="expCerrar">Cerrar</button><button class="btn" type="button" id="expCopiar">Copiar</button><button class="btn primary" type="button" id="expPdf">Guardar PDF</button></div>
+</div></div>
+
 <div class="toast" id="toast" role="status"><span id="toastTxt"></span><button type="button" id="toastBtn">Deshacer</button></div>
-<div class="tip" id="tip"></div>
 <script src="app.js"></script>
 </body>
 </html>

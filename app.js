@@ -454,15 +454,15 @@ function editar(m){
     S.imp.mov=fmtImp(imp);pintarPantalla("mov");
   }else if(m.tipo==="traspaso"){
     abrirTr("mover");$("trTitulo").textContent="Modificar movimiento de dinero";
-    $("trDe").value=m.sobre;$("trA").value=m.destino;S.imp.tr=fmtImp(m.importe);pintarPantalla("tr");
+    $("trDe").value=m.sobre;$("trA").value=m.destino;S.imp.tr=fmtImp(m.importe);pintarPantalla("tr");$("trNombre").value=m.nota;
   }else if(m.tipo==="colchon"){
     if(!sobrePorId(m.sobre)){toast("Ese sobre ya no existe: bórralo y apúntalo de nuevo");return;}
-    abrirTr("colchon",m.sobre);$("trTitulo").textContent="Modificar uso del colchón";S.imp.tr=fmtImp(m.importe);pintarPantalla("tr");
+    abrirTr("colchon",m.sobre);$("trTitulo").textContent="Modificar uso de sobrantes";S.imp.tr=fmtImp(m.importe);pintarPantalla("tr");$("trNombre").value=m.nota==="De sobrantes"||m.nota==="Del colchón"?"":m.nota;
   }else if(m.tipo==="saldo"){
     var c=cuentas().filter(function(x){return clavePersona(x.nombre)===clavePersona(ex.persona);})[0]||{nombre:ex.persona,saldo:0};
     abrirSal(c);$("salTitulo").textContent="Modificar pago con "+ex.persona;
     document.querySelector('input[name="dir"][value="'+(ex.dir==="pago"?"pago":"cobro")+'"]').checked=true;
-    S.imp.sal=fmtImp(m.importe);pintarPantalla("sal");
+    S.imp.sal=fmtImp(m.importe);pintarPantalla("sal");$("salNombre").value=m.nota;
   }else return;
   S.editando=m;
 }
@@ -600,6 +600,7 @@ function pintarComp(){
 function personasCampo(){var vistos={};return $("fPersona").value.split(",").map(function(x){return x.trim();}).filter(function(x){var k=clavePersona(x);if(!k||vistos[k])return false;vistos[k]=1;return true;}).slice(0,10);}
 function abrirSal(c){
   S.editando=null;
+  $("salNombre").value="";
   S.salPersona=c.nombre;S.imp.sal=String(Math.abs(c.saldo)).replace(".",",");pintarPantalla("sal");$("salErr").textContent="";
   $("salTitulo").textContent="Saldar con "+c.nombre;
   $("salNota").textContent=(c.saldo<0?"Le debes "+eur.format(-c.saldo)+".":"Te debe "+eur.format(c.saldo)+".")+" Esto no cuenta como gasto: ya lo apuntaste en su día.";
@@ -613,7 +614,7 @@ function guardarSal(ev){
   if(!(imp>0)){$("salErr").textContent="Escribe un importe mayor que 0.";return;}
   if(!dir){$("salErr").textContent="Elige quién ha pagado.";return;}
   cerrar("vSal");
-  apuntar({tipo:"saldo",importe:imp,sobre:"",nota:"",fecha:hoyStr(),extra:{persona:S.salPersona,dir:dir}});
+  apuntar({tipo:"saldo",importe:imp,sobre:"",nota:$("salNombre").value.trim(),fecha:hoyStr(),extra:{persona:S.salPersona,dir:dir}});
 }
 function quitar(id){
   var pend=S.cola.filter(function(o){return o.t==="add"&&o.mov.id===id;}).length>0;
@@ -629,7 +630,7 @@ function borrar(id){
 function abrirTr(modo,sobreId,destinoId){
   if(S.sobres.length<1){abrirAj();return;}
   S.editando=null;
-  S.trModo=modo;S.trSobre=sobreId||null;S.imp.tr="";pintarPantalla("tr");$("trErr").textContent="";
+  S.trModo=modo;S.trSobre=sobreId||null;S.imp.tr="";pintarPantalla("tr");$("trErr").textContent="";$("trNombre").value="";$("trNombre").parentNode.hidden=modo==="cerrar";
   var de=$("trDe"),a=$("trA");de.textContent="";a.textContent="";
   var orden=porTipo("gasto").concat(porTipo("ahorro")).concat(porTipo("viaje"));
   orden.forEach(function(s){var o1=el("option",null,s.nombre+" ("+eur.format(s.tipo==="gasto"?calc(s).queda:calc(s).total)+")");o1.value=s.id;de.appendChild(o1);
@@ -675,16 +676,16 @@ function guardarTr(ev){
     var lim=r2(c.colchon+(S.editando&&S.editando.tipo==="colchon"&&S.editando.sobre===s.id?S.editando.importe:0));
     if(imp>lim){$("trErr").textContent="De sobrantes solo hay "+eur.format(lim)+".";return;}
     var dest=$("trA").value||s.id;
-    if(dest===s.id||S.editando){cerrar("vTr");apuntar({tipo:"colchon",importe:imp,sobre:s.id,nota:"De sobrantes",fecha:hoyStr()});return;}
+    if(dest===s.id||S.editando){cerrar("vTr");apuntar({tipo:"colchon",importe:imp,sobre:s.id,nota:$("trNombre").value.trim()||"De sobrantes",fecha:hoyStr()});return;}
     var f=hoyStr(),ts=Date.now();
     cerrar("vTr");
-    hacerVarios([{t:"add",mov:{id:uid("m"),tipo:"colchon",importe:imp,sobre:s.id,sobreNombre:s.nombre,nota:"De sobrantes",etiqueta:"",fecha:f,ts:ts}},
-                 {t:"add",mov:{id:uid("m"),tipo:"traspaso",importe:imp,sobre:s.id,destino:dest,sobreNombre:s.nombre+" → "+nombreSobre(dest),nota:"Sobrante de "+s.nombre,etiqueta:"",fecha:f,ts:ts+1}}]);
+    hacerVarios([{t:"add",mov:{id:uid("m"),tipo:"colchon",importe:imp,sobre:s.id,sobreNombre:s.nombre,nota:$("trNombre").value.trim()||"De sobrantes",etiqueta:"",fecha:f,ts:ts}},
+                 {t:"add",mov:{id:uid("m"),tipo:"traspaso",importe:imp,sobre:s.id,destino:dest,sobreNombre:s.nombre+" → "+nombreSobre(dest),nota:$("trNombre").value.trim()||"Sobrante de "+s.nombre,etiqueta:"",fecha:f,ts:ts+1}}]);
     toast("Pasados "+eur.format(imp)+" de sobrantes a "+nombreSobre(dest));return;
   }
   var de=$("trDe").value,a=$("trA").value;
   if(de===a){$("trErr").textContent="Elige dos sobres distintos.";return;}
-  cerrar("vTr");apuntar({tipo:"traspaso",importe:imp,sobre:de,destino:a,nota:"",fecha:hoyStr()});
+  cerrar("vTr");apuntar({tipo:"traspaso",importe:imp,sobre:de,destino:a,nota:$("trNombre").value.trim(),fecha:hoyStr()});
 }
 
 /* ---------- ajustes ---------- */

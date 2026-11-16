@@ -271,6 +271,7 @@ function actualizarResumen() {
   h.getCharts().forEach(function (c) { h.removeChart(c); });
   h.getRange(1, 1, h.getMaxRows(), h.getMaxColumns()).breakApart();
   h.clear(); dt.clear();
+  ['A:A', 'T:T', 'W:W', 'Z:Z', 'AC:AC', 'AG:AG'].forEach(function (c) { dt.getRange(c).setNumberFormat('@'); });
   if (h.getMaxRows() < 110) h.insertRowsAfter(h.getMaxRows(), 110 - h.getMaxRows());
   if (h.getMaxColumns() < 14) h.insertColumnsAfter(h.getMaxColumns(), 14 - h.getMaxColumns());
   h.setHiddenGridlines(true);
@@ -349,7 +350,6 @@ function actualizarResumen() {
   var semanas = Math.max(1, diasHasta_(hoy, primera) / 7);
   var t6 = [['Día', 'Media por semana']].concat(DIAS_.map(function (d, i) { return [d, Math.round(sem[i] / semanas * 100) / 100]; }));
   dt.getRange(1, 33, t6.length, 2).setValues(t6);
-  dt.getRange('A:AH').setNumberFormat('0.00');
   dt.hideSheet();
 
   /* gráficos */
@@ -362,7 +362,7 @@ function actualizarResumen() {
   grafico_(h, Charts.ChartType.LINE, dt.getRange(1, 20, t2.length, 2), 33, 8, { title: 'Cómo crece tu ahorro', colors: [C_.verde], vAxis: vA, hAxis: hA, curveType: 'function', pointSize: 6, lineWidth: 3, legend: { position: 'none' }, width: 500 });
   titulo_(h, 'B48', 'En qué se va el dinero');
   grafico_(h, Charts.ChartType.PIE, dt.getRange(1, 23, t3.length, 2), 49, 2, { title: 'Por sobre (este mes)', pieHole: 0.55, colors: col3, pieSliceText: 'none', legend: { position: 'right', textStyle: { color: C_.tinta } } });
-  grafico_(h, Charts.ChartType.PIE, dt.getRange(1, 26, t4.length, 2), 49, 8, { title: 'Por etiqueta (todo)', pieHole: 0.55, colors: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'], pieSliceText: 'none', legend: { position: 'right', textStyle: { color: C_.tinta } }, width: 500 });
+  grafico_(h, Charts.ChartType.PIE, dt.getRange(1, 26, t4.length, 2), 49, 8, { title: 'Por etiqueta (todo)', pieHole: 0.55, colors: et.length ? ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'] : [C_.pista], pieSliceText: 'none', legend: { position: 'right', textStyle: { color: C_.tinta } }, width: 500 });
 
   /* top 10 y gastos fijos */
   titulo_(h, 'B64', 'Los 10 gastos más grandes del mes');

@@ -120,6 +120,13 @@ select,input[type=text],input[type=date]{border:1px solid var(--line);background
 .chips input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
 .acts{display:flex;gap:10px}
 .acts .btn{flex:1;padding:14px}
+.check{display:flex;align-items:center;gap:10px;font-weight:600;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--accent)}
+.comp{border:1px dashed var(--line);border-radius:12px;padding:12px}
+.partes{display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center}
+.persona{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.persona .quien{font-weight:600}
+.persona .cuanto{font-family:var(--display);font-weight:600;font-size:18px}
 .err{color:var(--bad);font-size:14px;min-height:1.2em}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .three{display:grid;grid-template-columns:1.4fr .8fr 1fr auto;gap:8px;align-items:center}
@@ -161,7 +168,7 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
   <section class="top" aria-live="polite">
     <span class="lbl">Te queda para gastar este mes</span>
     <span class="big num" id="tTotal">—</span>
-    <span class="sub"><span id="tCobro"></span><span id="tDia"></span><span id="tAhorro"></span></span>
+    <span class="sub"><span id="tCobro"></span><span id="tDia"></span><span id="tAhorro"></span><span id="tDeuda"></span></span>
   </section>
   <div class="rapidos" id="lRapidos" aria-label="Gastos rápidos"></div>
   <div id="status" class="note" role="status"></div>
@@ -174,6 +181,10 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
       <div class="sec">
         <div class="sechead"><h2>Ahorro · imagin</h2></div>
         <div id="lAhorro" class="grid2"></div>
+      </div>
+      <div class="sec" id="secCuentas" hidden>
+        <div class="sechead"><h2>Cuentas con amigos</h2><span class="note" id="cuentasTotal"></span></div>
+        <div id="lCuentas" class="sec"></div>
       </div>
     </div>
     <div class="sec" style="gap:16px">
@@ -208,6 +219,16 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
     <div class="pantalla num vacia" id="movPantalla" role="textbox" aria-labelledby="movImpLab" aria-live="polite" tabindex="0">0</div>
     <div class="teclado" id="movTeclado"></div></div>
   <div class="field"><span class="lab" id="movSobreLab">¿De qué sobre?</span><div class="chips" id="fChips"></div></div>
+  <div class="field" id="compWrap"><label class="check"><input type="checkbox" id="fComp"> Compartido con alguien</label></div>
+  <div class="sec comp" id="compBox" hidden>
+    <div class="field"><span class="lab">¿Quién pagó?</span><div class="chips">
+      <label><input type="radio" name="pago" value="yo" checked><span>Yo</span></label>
+      <label><input type="radio" name="pago" value="otro"><span>Otra persona</span></label></div></div>
+    <div class="field"><label for="fPersona">¿Con quién?</label><input id="fPersona" type="text" maxlength="30" placeholder="Nombre" autocapitalize="words"><div class="chips" id="fPersChips"></div></div>
+    <div class="field" id="parteWrap"><label for="fParte">Mi parte (€)</label>
+      <div class="partes"><input id="fParte" type="text" inputmode="decimal"><button class="btn small" type="button" data-parte="mitad">Mitad</button><button class="btn small" type="button" data-parte="nada">Nada</button><button class="btn small" type="button" data-parte="todo">Todo</button></div></div>
+    <p class="note" id="compNota" style="margin:0"></p>
+  </div>
   <div class="field" id="fEtiqWrap" hidden><span class="lab">Etiqueta (opcional)</span><div class="chips" id="fEtiq"></div></div>
   <div class="field"><label for="fNota">Nota (opcional)</label><input id="fNota" type="text" maxlength="80"></div>
   <div class="field"><label for="fFecha">Fecha</label><input id="fFecha" type="date"></div>
@@ -250,6 +271,19 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
     <span class="note" id="aUrlEstado"></span></div>
   <div class="err" id="ajErr" role="alert"></div>
   <div class="acts"><button class="btn" type="button" id="ajCancel">Cancelar</button><button class="btn primary" type="submit" id="ajOk">Guardar</button></div>
+</form></div>
+
+<div class="veil" id="vSal"><form class="sheet" id="formSal" autocomplete="off">
+  <h1 id="salTitulo">Saldar cuentas</h1>
+  <p class="note" id="salNota" style="margin:0"></p>
+  <div class="field"><span class="lab">¿Qué ha pasado?</span><div class="chips">
+    <label><input type="radio" name="dir" value="pago"><span id="salPago">Le he pagado yo</span></label>
+    <label><input type="radio" name="dir" value="cobro"><span id="salCobro">Me ha pagado</span></label></div></div>
+  <div class="field"><span class="lab" id="salImpLab">Importe (€)</span>
+    <div class="pantalla num vacia" id="salPantalla" role="textbox" aria-labelledby="salImpLab" aria-live="polite" tabindex="0">0</div>
+    <div class="teclado" id="salTeclado"></div></div>
+  <div class="err" id="salErr" role="alert"></div>
+  <div class="acts"><button class="btn" type="button" id="salCancel">Cancelar</button><button class="btn primary" type="submit">Saldar</button></div>
 </form></div>
 
 <div class="toast" id="toast" role="status"><span id="toastTxt"></span><button type="button" id="toastBtn">Deshacer</button></div>

@@ -60,6 +60,9 @@ h3{font-size:14px;font-weight:600}
 .top .sub{font-size:14px;opacity:.9;display:flex;gap:12px;flex-wrap:wrap}
 .cobro{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.25);font-size:14px}
 .cobro button{background:var(--accent-ink);color:var(--accent);border:0;border-radius:10px;padding:10px 16px;font-family:var(--display);font-weight:600;cursor:pointer}
+.cobro.suave{border-top:0;margin-top:2px;padding-top:0;opacity:.95}
+.cobro.suave button{background:transparent;color:var(--accent-ink);border:1px solid currentColor;padding:6px 12px;font-size:13px}
+.reprow{display:grid;grid-template-columns:1fr 90px;gap:8px;align-items:center}
 .sobrante{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}
 .rapidos{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .rapidos::-webkit-scrollbar{display:none}
@@ -233,7 +236,8 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
   <div class="field"><span class="lab" id="movImpLab">Importe (€)</span>
     <div class="pantalla num vacia" id="movPantalla" role="textbox" aria-labelledby="movImpLab" aria-live="polite" tabindex="0">0</div>
     <div class="teclado" id="movTeclado"></div></div>
-  <div class="field"><span class="lab" id="movSobreLab">¿De qué sobre?</span><div class="chips" id="fChips"></div></div>
+  <div class="field" id="repWrap" hidden><label class="check"><input type="checkbox" id="fRep" checked> Repartir entre los sobres (por porcentajes)</label><div class="note" id="repPrev"></div></div>
+  <div class="field" id="sobreWrap"><span class="lab" id="movSobreLab">¿De qué sobre?</span><div class="chips" id="fChips"></div></div>
   <div class="field" id="compWrap"><label class="check"><input type="checkbox" id="fComp"> Compartido con alguien</label></div>
   <div class="sec comp" id="compBox" hidden>
     <div class="field"><span class="lab">¿Quién pagó?</span><div class="chips">
@@ -281,6 +285,10 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
   <p class="note" style="margin:0">Salen arriba en la pantalla principal. Un toque y queda apuntado.</p>
   <div id="aRapidos" class="sec"></div>
   <button class="btn" type="button" id="aRapAdd">+ Añadir gasto rápido</button>
+  <h3>Reparto del dinero extra</h3>
+  <p class="note" style="margin:0">Cuando añadas dinero extra con «+ Dinero», se reparte con estos porcentajes.</p>
+  <div id="aReparto" class="sec"></div>
+  <span class="note" id="aRepSuma"></span>
   <h3>Gastos fijos</h3>
   <p class="note" style="margin:0">Se apuntan solos cada mes el día que pongas (suscripciones, móvil, bono…).</p>
   <div id="aFijos" class="sec"></div>

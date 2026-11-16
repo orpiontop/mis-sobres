@@ -13,8 +13,14 @@ var S={sobres:[],movs:[],cfg:{inicio:null,cobro:425,rapidos:[]},cola:[],url:"",s
 function pad(n){return n<10?"0"+n:""+n;}
 function hoyStr(){var d=new Date();return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
 function diaCobro(y,m){return new Date(y,m+1,0).getDate()-2;}
-function idxDe(str){var p=str.split("-"),y=+p[0],m=+p[1]-1,d=+p[2];return y*12+m-(d>=diaCobro(y,m)?0:1);}
-function inicioDe(idx){var y=Math.floor(idx/12),m=idx%12;return y+"-"+pad(m+1)+"-"+pad(diaCobro(y,m));}
+function idxAuto(str){var p=str.split("-"),y=+p[0],m=+p[1]-1,d=+p[2];return y*12+m-(d>=diaCobro(y,m)?0:1);}
+function inicioAuto(idx){var y=Math.floor(idx/12),m=idx%12;return y+"-"+pad(m+1)+"-"+pad(diaCobro(y,m));}
+function addDias(str,n){var p=str.split("-"),d=new Date(+p[0],+p[1]-1,+p[2]+n);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
+/* Si pulsas «He cobrado», el mes empieza ese día; si no, empieza solo el antepenúltimo día. */
+function cobros(){return (S.cfg&&S.cfg.cobros)||{};}
+function claveCobro(fecha){return idxAuto(addDias(fecha,7));}
+function inicioDe(k){return cobros()[k]||inicioAuto(k);}
+function idxDe(str){var k=idxAuto(str),c=cobros();if(c[k]&&str<c[k])return k-1;if(c[k+1]&&str>=c[k+1])return k+1;return k;}
 function corto(str){var p=str.split("-");return (+p[2])+" "+MES[+p[1]-1];}
 function antes(str){var p=str.split("-"),d=new Date(+p[0],+p[1]-1,+p[2]-1);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
 function diasHasta(str){var p=str.split("-"),a=new Date(+p[0],+p[1]-1,+p[2]),h=new Date();h=new Date(h.getFullYear(),h.getMonth(),h.getDate());return Math.round((a-h)/864e5);}
@@ -42,7 +48,8 @@ function limpiaMovs(l){return (Array.isArray(l)?l:[]).filter(function(x){return 
 function limpiaRapidos(l){return (Array.isArray(l)?l:[]).filter(function(x){return x&&x.nombre&&+x.importe>0&&x.sobre;}).map(function(x){return {id:String(x.id||uid("r")),nombre:String(x.nombre),importe:r2(+x.importe),sobre:String(x.sobre),etiqueta:String(x.etiqueta||"")};}).slice(0,12);}
 function limpiaFijos(l){return (Array.isArray(l)?l:[]).filter(function(x){return x&&x.nombre&&+x.importe>0&&x.sobre&&+x.dia>=1&&+x.dia<=31;}).map(function(x){return {id:String(x.id||uid("f")),nombre:String(x.nombre),importe:r2(+x.importe),sobre:String(x.sobre),dia:Math.round(+x.dia)};}).slice(0,20);}
 function limpiaCfg(c,prev){prev=prev||S.cfg;c=c||{};return {inicio:typeof c.inicio==="number"?c.inicio:prev.inicio,cobro:typeof c.cobro==="number"?c.cobro:prev.cobro,
-  rapidos:Array.isArray(c.rapidos)?limpiaRapidos(c.rapidos):(prev.rapidos||[]),fijos:Array.isArray(c.fijos)?limpiaFijos(c.fijos):(prev.fijos||[])};}
+  rapidos:Array.isArray(c.rapidos)?limpiaRapidos(c.rapidos):(prev.rapidos||[]),fijos:Array.isArray(c.fijos)?limpiaFijos(c.fijos):(prev.fijos||[]),cobros:limpiaCobros(c.cobros!==undefined?c.cobros:prev.cobros)};}
+function limpiaCobros(o){var r={};if(o&&typeof o==="object"&&!Array.isArray(o))Object.keys(o).forEach(function(k){if(/^\d+$/.test(k)&&/^\d{4}-\d{2}-\d{2}$/.test(o[k]))r[k]=o[k];});return r;}
 
 /* ---------- guardar en el dispositivo ---------- */
 function grabar(){try{localStorage.setItem(K,JSON.stringify({sobres:S.sobres,movs:S.movs,cfg:S.cfg,cola:S.cola,url:S.url,sinc:S.sinc,ultimo:S.ultimo,fijosHechos:S.fijosHechos}));}catch(e){}}
@@ -186,17 +193,24 @@ function pintar(){
     else if(st==="low")meta.appendChild(el("span","pill low","Queda poco"));
     card.appendChild(meta);
     if(c.queda>0)card.appendChild(el("div","meta num","Puedes gastar ≈ "+eur.format(r2(c.queda/dias))+" al día"));
-    var m2=el("div","meta");
-    m2.appendChild(el("span","num"+(c.colchon<0?" neg":""),"Colchón: "+eur.format(c.colchon)));
-    if(c.colchon>=0.01){
-      var bc=el("button","btn small","Usar colchón");bc.type="button";
-      bc.addEventListener("click",function(){abrirTr("colchon",s.id);});m2.appendChild(bc);
-    }
-    card.appendChild(m2);
     lg.appendChild(card);
   });
   pintarViajes();
   var la=$("lAhorro");la.textContent="";
+  if(gasto.length){
+    var tSob=0,cs2=el("div","card sobre");cs2.style.borderLeftColor="var(--accent)";cs2.style.gridColumn="1 / -1";
+    var hd=el("div","row");hd.appendChild(el("span","name","Sobrantes de otros meses"));var tot2=el("span","amt num");hd.appendChild(tot2);cs2.appendChild(hd);
+    gasto.forEach(function(s){
+      var c=calc(s);tSob+=c.colchon;
+      var f=el("div","sobrante"),n=el("span",null),dt=el("span","dot");dt.style.background=color(s);n.style.display="flex";n.style.alignItems="center";n.style.gap="6px";n.appendChild(dt);n.appendChild(document.createTextNode(s.nombre));f.appendChild(n);
+      var dr=el("span","sobrante");dr.appendChild(el("span","num"+(c.colchon<0?" neg":""),eur.format(c.colchon)));
+      if(c.colchon>=0.01){var bu=el("button","btn small","Usar");bu.type="button";bu.setAttribute("aria-label","Usar sobrante de "+s.nombre);bu.addEventListener("click",function(){abrirTr("colchon",s.id);});dr.appendChild(bu);}
+      f.appendChild(dr);cs2.appendChild(f);
+    });
+    tot2.textContent=eur.format(tSob);if(tSob<0)tot2.classList.add("neg");
+    cs2.appendChild(el("span","meta","Lo que no gastaste. Si un mes te falta en un sobre, pulsa Usar."));
+    la.appendChild(cs2);tAh+=tSob;
+  }
   ahorro.forEach(function(s){
     var c=calc(s);tAh+=c.total;
     var card=el("div","card sobre");card.style.borderLeftColor=color(s);
@@ -218,7 +232,22 @@ function pintar(){
   var cs=cuentas(),neto=r2(cs.reduce(function(a,c){return a+c.saldo;},0));
   $("tDeuda").textContent=neto<0?"Debes a amigos: "+eur.format(-neto):neto>0?"Te deben: "+eur.format(neto):"";
   pintarCuentas(cs,neto);
+  pintarCobro();
   pintarRapidos();pintarFiltros();pintarResumen();pintarMovs();aviso();
+}
+function pintarCobro(){
+  var hoy=hoyStr(),k=ahora(),c=cobros(),box=$("cobroBox"),txt="";
+  var prox=inicioAuto(k+1),actual=inicioAuto(k);
+  if(!c[k+1]&&hoy>=addDias(prox,-6))txt="¿Ya te ha llegado el sueldo?";
+  else if(!c[k]&&hoy>=actual&&hoy<=addDias(actual,6)&&k>primero())txt="El mes empezó solo el "+corto(actual)+". ¿Te ha llegado ya el sueldo?";
+  box.hidden=!txt;$("cobroTxt").textContent=txt;
+}
+function heCobrado(){
+  var hoy=hoyStr(),key=claveCobro(hoy),c=JSON.parse(JSON.stringify(cobros())),antes=c[key];
+  c[key]=hoy;
+  var cfg=JSON.parse(JSON.stringify(S.cfg));cfg.cobros=c;
+  hacer({t:"cfg",cfg:cfg});
+  toast("¡Mes nuevo! Lo que sobró pasa a Sobrantes",function(){var c2=JSON.parse(JSON.stringify(cobros()));if(antes)c2[key]=antes;else delete c2[key];var cf=JSON.parse(JSON.stringify(S.cfg));cf.cobros=c2;hacer({t:"cfg",cfg:cf});toast("Deshecho");});
 }
 function pintarViajes(){
   var vs=porTipo("viaje"),box=$("lViajes");box.textContent="";$("secViajes").hidden=!vs.length;
@@ -300,7 +329,7 @@ function pintarResumen(){
   box.appendChild(tile("Gastado",eur.format(r.gastado)));
   box.appendChild(tile("Dinero añadido",eur.format(r.anadido)));
   box.appendChild(tile("Ahorrado",eur.format(r.ahorrado)));
-  if(r.gs.length)box.appendChild(tile(r.todo||r.acabado?"Sobró (al colchón)":"Te sobra ahora",eur.format(r.sobra),r.sobra<0?"neg":""));
+  if(r.gs.length)box.appendChild(tile(r.todo||r.acabado?"Sobró (a Sobrantes)":"Te sobra ahora",eur.format(r.sobra),r.sobra<0?"neg":""));
 }
 function periodoTxt(r){if(r.todo)return "Todo";var k=r.ks[0];return corto(inicioDe(k))+" – "+corto(antes(inicioDe(k+1)));}
 function abrirExp(){
@@ -310,7 +339,7 @@ function abrirExp(){
   L.push("Gastado: "+eur.format(r.gastado));
   L.push("Dinero añadido: "+eur.format(r.anadido));
   L.push("Ahorrado: "+eur.format(r.ahorrado));
-  if(r.gs.length)L.push((r.todo||r.acabado?"Sobró (al colchón): ":"Te sobra ahora: ")+eur.format(r.sobra));
+  if(r.gs.length)L.push((r.todo||r.acabado?"Sobró (a Sobrantes): ":"Te sobra ahora: ")+eur.format(r.sobra));
   if(r.porSobre.length){L.push("");L.push("POR SOBRE");r.porSobre.forEach(function(x){L.push("· "+x[0].nombre+": gastado "+eur.format(x[1])+" de "+eur.format(x[2])+" (queda "+eur.format(x[3])+")");});}
   if(r.as.length){L.push("");L.push("AHORRO (TOTAL)");r.as.forEach(function(s){L.push("· "+s.nombre+": "+eur.format(calc(s).total));});}
   var vs=porTipo("viaje");if(vs.length&&!fs){L.push("");L.push("VIAJES Y PLANES");vs.forEach(function(s){L.push("· "+s.nombre+": quedan "+eur.format(calc(s).total));});}
@@ -331,7 +360,7 @@ function descMov(m){
   if(ex.fijo)extraTxt+=" · fijo";
   if(m.tipo==="saldo"){tit=m.nota||(ex.dir==="pago"?"Pagado a "+ex.persona:ex.persona+" te pagó");sub="Cuentas con amigos";q="↔ "+eur.format(m.importe);}
   else if(m.tipo==="traspaso"){tit=m.nota||"Dinero movido";sub=nombreSobre(m.sobre)+" → "+nombreSobre(m.destino);q="⇄ "+eur.format(m.importe);}
-  else if(m.tipo==="colchon"){tit=m.nota||"Del colchón";sub=nombreSobre(m.sobre);q="↑ "+eur.format(m.importe);}
+  else if(m.tipo==="colchon"){tit=m.nota==="Del colchón"||!m.nota?"De sobrantes":m.nota;sub=nombreSobre(m.sobre);q="↑ "+eur.format(m.importe);}
   else if(m.tipo==="ingreso"){tit=m.nota||"Dinero añadido";sub=nombreSobre(m.sobre);q="+"+eur.format(m.importe);cls="pos";}
   else{tit=m.nota||"Gasto";sub=nombreSobre(m.sobre);q="−"+eur.format(m.importe);}
   return {tit:tit,sub:sub+(m.etiqueta?" · "+m.etiqueta:"")+extraTxt,q:q,cls:cls};
@@ -455,7 +484,7 @@ function apuntar(mov){
   mov.sobreNombre=nombreMov(mov);
   if(mov.sobre)S.ultimo=mov.sobre;
   hacer({t:"add",mov:mov});
-  var txt=mov.tipo==="gasto"?"Gasto apuntado":mov.tipo==="ingreso"?"Dinero añadido":mov.tipo==="colchon"?"Colchón usado":mov.tipo==="saldo"?"Cuentas actualizadas":"Dinero movido";
+  var txt=mov.tipo==="gasto"?"Gasto apuntado":mov.tipo==="ingreso"?"Dinero añadido":mov.tipo==="colchon"?"Sobrante usado":mov.tipo==="saldo"?"Cuentas actualizadas":"Dinero movido";
   if(antes&&mov.tipo==="gasto"){
     var des=calc(s),fa=antes.disp>0?antes.queda/antes.disp:0,fd=des.disp>0?des.queda/des.disp:0;
     if(des.queda<0&&antes.queda>=0)txt+=" · Te has pasado en "+s.nombre;
@@ -571,8 +600,8 @@ function abrirTr(modo,sobreId,destinoId){
   $("trDeWrap").hidden=modo==="cerrar";
   if(modo==="colchon"){
     var s=sobrePorId(sobreId),c=calc(s);
-    $("trTitulo").textContent="Usar colchón · "+s.nombre;
-    $("trNota").textContent="Tienes "+eur.format(c.colchon)+" en el colchón de "+s.nombre+". Lo que uses se suma a lo que te queda este mes.";
+    $("trTitulo").textContent="Usar sobrante · "+s.nombre;
+    $("trNota").textContent="Tienes "+eur.format(c.colchon)+" sobrantes de "+s.nombre+". Lo que uses se suma a lo que te queda este mes.";
     $("trSel").hidden=true;
   }else if(modo==="cerrar"){
     var v=sobrePorId(sobreId),cv=calc(v);
@@ -607,8 +636,8 @@ function guardarTr(ev){
   if(S.trModo==="colchon"){
     var s=sobrePorId(S.trSobre),c=calc(s);
     var lim=r2(c.colchon+(S.editando&&S.editando.tipo==="colchon"&&S.editando.sobre===s.id?S.editando.importe:0));
-    if(imp>lim){$("trErr").textContent="En el colchón solo hay "+eur.format(lim)+".";return;}
-    cerrar("vTr");apuntar({tipo:"colchon",importe:imp,sobre:s.id,nota:"Del colchón",fecha:hoyStr()});return;
+    if(imp>lim){$("trErr").textContent="De sobrantes solo hay "+eur.format(lim)+".";return;}
+    cerrar("vTr");apuntar({tipo:"colchon",importe:imp,sobre:s.id,nota:"De sobrantes",fecha:hoyStr()});return;
   }
   var de=$("trDe").value,a=$("trA").value;
   if(de===a){$("trErr").textContent="Elige dos sobres distintos.";return;}
@@ -767,6 +796,7 @@ Array.prototype.forEach.call(document.querySelectorAll("[data-parte]"),function(
   var imp=num(S.imp.mov)||0,v=b.dataset.parte==="mitad"?r2(imp/(Math.max(1,personasCampo().length)+1)):b.dataset.parte==="nada"?0:imp;
   $("fParte").value=String(v).replace(".",",");S.parteTocada=true;pintarComp();});});
 $("formSal").addEventListener("submit",guardarSal);
+$("bCobrado").addEventListener("click",heCobrado);
 $("fBuscar").addEventListener("input",pintarMovs);
 $("bExportar").addEventListener("click",abrirExp);
 $("expCerrar").addEventListener("click",function(){cerrar("vExp");});

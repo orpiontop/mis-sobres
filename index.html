@@ -58,6 +58,9 @@ h3{font-size:14px;font-weight:600}
 .top .lbl{font-size:14px;opacity:.85}
 .top .big{font-family:var(--display);font-weight:700;font-size:44px;line-height:1.05}
 .top .sub{font-size:14px;opacity:.9;display:flex;gap:12px;flex-wrap:wrap}
+.cobro{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:8px;padding-top:10px;border-top:1px solid rgba(255,255,255,.25);font-size:14px}
+.cobro button{background:var(--accent-ink);color:var(--accent);border:0;border-radius:10px;padding:10px 16px;font-family:var(--display);font-weight:600;cursor:pointer}
+.sobrante{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:14px}
 .rapidos{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
 .rapidos::-webkit-scrollbar{display:none}
 .rap{flex:none;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:8px 14px;cursor:pointer;font:inherit;color:inherit}
@@ -176,6 +179,7 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
     <span class="lbl">Te queda para gastar este mes</span>
     <span class="big num" id="tTotal">—</span>
     <span class="sub"><span id="tCobro"></span><span id="tDia"></span><span id="tAhorro"></span><span id="tDeuda"></span></span>
+    <div class="cobro" id="cobroBox" hidden><span id="cobroTxt">¿Ya te ha llegado el sueldo?</span><button type="button" id="bCobrado">He cobrado</button></div>
   </section>
   <div class="rapidos" id="lRapidos" aria-label="Gastos rápidos"></div>
   <div id="status" class="note" role="status"></div>

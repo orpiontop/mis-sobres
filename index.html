@@ -105,10 +105,12 @@ button,select,input{font:inherit;color:inherit}
 select,input[type=text],input[type=date]{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 10px;min-width:0;width:100%}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .dock{position:fixed;left:0;right:0;bottom:0;background:var(--bg);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
-.dock div{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr;gap:8px}
+.dock div{max-width:1120px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr;gap:8px}
 .dock button{border:0;border-radius:14px;padding:16px 8px;font-family:var(--display);font-weight:600;font-size:16px;cursor:pointer}
 #bGasto{background:var(--ink);color:var(--bg)}
-#bIngreso,#bMover{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+#bMover{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.extra{margin-top:8px}
+.extra button{background:transparent;color:var(--accent-ink);border:1px solid currentColor;border-radius:10px;padding:8px 14px;font-family:var(--display);font-weight:600;font-size:14px;cursor:pointer}
 .veil{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:10}
 .veil.on{display:flex}
 .sheet{background:var(--surface);width:100%;max-width:520px;max-height:94%;overflow:auto;border-radius:18px 18px 0 0;padding:18px 16px calc(20px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px}
@@ -182,6 +184,7 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
     <span class="lbl">Te queda para gastar este mes</span>
     <span class="big num" id="tTotal">—</span>
     <span class="sub"><span id="tCobro"></span><span id="tDia"></span><span id="tAhorro"></span><span id="tDeuda"></span></span>
+    <div class="extra"><button type="button" id="bIngreso">+ Dinero extra</button></div>
     <div class="cobro" id="cobroBox" hidden><span id="cobroTxt">¿Ya te ha llegado el sueldo?</span><button type="button" id="bCobrado">He cobrado</button></div>
   </section>
   <div class="rapidos" id="lRapidos" aria-label="Gastos rápidos"></div>
@@ -227,7 +230,6 @@ details.tabla td.r,details.tabla th.r{text-align:right;font-variant-numeric:tabu
 
 <div class="dock"><div>
   <button id="bGasto" type="button">− Gasto</button>
-  <button id="bIngreso" type="button">+ Dinero</button>
   <button id="bMover" type="button">⇄ Mover</button>
 </div></div>
 

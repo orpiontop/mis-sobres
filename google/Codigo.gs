@@ -433,7 +433,7 @@ function pestanasLimpias_(ss, M) {
     }
     if (m.tipo === 'gasto' && x.fijo) quien = quien || 'Gasto fijo';
     var p = m.fecha.split('-');
-    return [new Date(+p[0], +p[1] - 1, +p[2]), TIPOS[m.tipo] || m.tipo, m.nota || '', sobre, imp, m.etiqueta || '', quien];
+    return [new Date(+p[0], +p[1] - 1, +p[2], 12), TIPOS[m.tipo] || m.tipo, m.nota || '', sobre, imp, m.etiqueta || '', quien];
   });
   var cab = ['Fecha', 'Tipo', 'Qué', 'Sobre', 'Importe', 'Etiqueta', 'Con quién'];
   h.getRange(6, 2, 1, 7).setValues([cab]).setFontWeight('bold').setFontColor(C_.gris).setFontSize(9).setBackground(C_.blanco)
@@ -451,6 +451,7 @@ function pestanasLimpias_(ss, M) {
     h.getRange(7, 3, filas.length, 1).setFontColors(colores).setFontWeight('bold').setFontSize(9);
     h.getRange(7, 6, filas.length, 1).setFontColors(filas.map(function (f) {
       return [f[1] === 'Movido' || f[1] === 'De sobrantes' ? C_.gris : f[4] < 0 ? C_.rojo : C_.verde]; }));
+    filas.forEach(function (f, i) { if (f[1] === 'Movido' || f[1] === 'De sobrantes' || f[4] === 0) h.getRange(7 + i, 6).setNumberFormat('#,##0.00 €').setFontColor(C_.gris); });
     h.setRowHeights(7, filas.length, 26);
     h.getRange(6, 2, filas.length + 1, 7).createFilter();
   } else {

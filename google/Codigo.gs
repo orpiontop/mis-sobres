@@ -388,5 +388,113 @@ function actualizarResumen() {
   if (cs.length) cs.forEach(function (c, i) { h.getRange(fc + 2 + i, 10).setFontColor(c.saldo < 0 ? C_.rojo : C_.verde).setFontWeight('bold'); });
 
   h.setFrozenRows(0);
+  pestanasLimpias_(ss, M);
   ss.setActiveSheet(h);
+}
+
+/* ---- pestañas fáciles de leer: Historial y Mis sobres ---- */
+function cabecera_(h, titulo, sub, ancho) {
+  h.setHiddenGridlines(true);
+  h.getRange(1, 1, h.getMaxRows(), h.getMaxColumns()).setBackground(C_.fondo).setFontFamily('Roboto').setFontColor(C_.tinta).setVerticalAlignment('middle');
+  h.setColumnWidth(1, 18);
+  h.setRowHeight(1, 12); h.setRowHeight(2, 40); h.setRowHeight(3, 22); h.setRowHeight(4, 14);
+  h.getRange(2, 2, 2, ancho).setBackground(C_.verde);
+  h.getRange(2, 2, 1, ancho).merge().setValue(titulo).setFontSize(20).setFontWeight('bold').setFontColor(C_.blanco);
+  h.getRange(3, 2, 1, ancho).merge().setValue(sub).setFontSize(10).setFontColor('#d7ebe3');
+}
+function limpiar_(h) {
+  var f = h.getFilter(); if (f) f.remove();
+  h.getRange(1, 1, h.getMaxRows(), h.getMaxColumns()).breakApart();
+  h.clear(); h.setFrozenRows(0);
+}
+function pestanasLimpias_(ss, M) {
+  var TIPOS = { gasto: 'Gasto', ingreso: 'Dinero extra', traspaso: 'Movido', colchon: 'De sobrantes', saldo: 'Cuenta con amigo', ajuste: 'Ajuste' };
+
+  /* Historial */
+  var h = ss.getSheetByName('Historial'); if (!h) h = ss.insertSheet('Historial');
+  limpiar_(h);
+  var movs = M.movs.slice().sort(function (a, b) { return a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : (b.ts || 0) - (a.ts || 0); });
+  var need = movs.length + 8;
+  if (h.getMaxRows() < need) h.insertRowsAfter(h.getMaxRows(), need - h.getMaxRows());
+  if (h.getMaxColumns() < 9) h.insertColumnsAfter(h.getMaxColumns(), 9 - h.getMaxColumns());
+  cabecera_(h, 'Historial', 'Todo lo que apuntas en la app, lo más nuevo arriba. Se rellena solo: no hace falta tocar nada.', 7);
+  [96, 120, 230, 190, 100, 120, 230].forEach(function (w, i) { h.setColumnWidth(i + 2, w); });
+  h.setColumnWidth(9, 18);
+  var filas = movs.map(function (m) {
+    var x = m.extra || {}, sobre = M.nombre(m.sobre), imp = m.importe, quien = '';
+    if (m.tipo === 'gasto') imp = -m.importe;
+    else if (m.tipo === 'traspaso') sobre = M.nombre(m.sobre) + '  →  ' + M.nombre(m.destino);
+    else if (m.tipo === 'colchon') sobre = 'Sobrantes  →  ' + sobre;
+    else if (m.tipo === 'saldo') { imp = x.dir === 'pago' ? -m.importe : m.importe; quien = (x.dir === 'pago' ? 'Le pagaste a ' : 'Te pagó ') + (x.persona || ''); }
+    if (m.tipo === 'gasto' && x.comp) {
+      var ps = (x.comp.personas && x.comp.personas.length ? x.comp.personas : [x.comp.persona]).join(', ');
+      var tot = (+x.comp.total || 0).toFixed(2).replace('.', ',') + ' €';
+      quien = x.comp.pago === 'yo' ? 'Pagaste tú ' + tot + ' con ' + ps : 'Pagó ' + ps + ' (tu parte)';
+    }
+    if (m.tipo === 'gasto' && x.fijo) quien = quien || 'Gasto fijo';
+    var p = m.fecha.split('-');
+    return [new Date(+p[0], +p[1] - 1, +p[2]), TIPOS[m.tipo] || m.tipo, m.nota || '', sobre, imp, m.etiqueta || '', quien];
+  });
+  var cab = ['Fecha', 'Tipo', 'Qué', 'Sobre', 'Importe', 'Etiqueta', 'Con quién'];
+  h.getRange(6, 2, 1, 7).setValues([cab]).setFontWeight('bold').setFontColor(C_.gris).setFontSize(9).setBackground(C_.blanco)
+    .setBorder(false, false, true, false, false, false, C_.linea, SpreadsheetApp.BorderStyle.SOLID);
+  h.setRowHeight(6, 28);
+  if (filas.length) {
+    var r = h.getRange(7, 2, filas.length, 7);
+    r.setValues(filas).setBackground(C_.blanco).setFontSize(10).setFontColor(C_.tinta)
+      .setBorder(false, false, true, false, false, true, C_.pista, SpreadsheetApp.BorderStyle.SOLID);
+    h.getRange(7, 2, filas.length, 1).setNumberFormat('d mmm yyyy');
+    h.getRange(7, 6, filas.length, 1).setNumberFormat('+#,##0.00 €;-#,##0.00 €;0.00 €').setHorizontalAlignment('right').setFontWeight('bold');
+    h.getRange(7, 8, filas.length, 1).setFontColor(C_.gris);
+    var colTipo = { Gasto: C_.rojo, 'Dinero extra': C_.verde, Movido: C_.gris, 'De sobrantes': C_.gris, 'Cuenta con amigo': '#6250d6', Ajuste: C_.naranja };
+    var colores = filas.map(function (f) { return [colTipo[f[1]] || C_.tinta]; });
+    h.getRange(7, 3, filas.length, 1).setFontColors(colores).setFontWeight('bold').setFontSize(9);
+    h.getRange(7, 6, filas.length, 1).setFontColors(filas.map(function (f) {
+      return [f[1] === 'Movido' || f[1] === 'De sobrantes' ? C_.gris : f[4] < 0 ? C_.rojo : C_.verde]; }));
+    h.setRowHeights(7, filas.length, 26);
+    h.getRange(6, 2, filas.length + 1, 7).createFilter();
+  } else {
+    h.getRange(7, 2).setValue('Todavía no has apuntado nada').setFontStyle('italic').setFontColor(C_.gris);
+  }
+  h.setFrozenRows(6);
+
+  /* Mis sobres */
+  var s = ss.getSheetByName('Mis sobres'); if (!s) s = ss.insertSheet('Mis sobres');
+  limpiar_(s);
+  if (s.getMaxColumns() < 8) s.insertColumnsAfter(s.getMaxColumns(), 8 - s.getMaxColumns());
+  cabecera_(s, 'Mis sobres', 'Tus sobres y carpetas, y cómo repartes el sueldo. Para cambiarlos, usa “Ajustar sobres” en la app.', 6);
+  [26, 190, 140, 110, 110, 190].forEach(function (w, i) { s.setColumnWidth(i + 2, w); });
+  s.setColumnWidth(8, 18);
+  var TS = { gasto: 'Gasto del mes', ahorro: 'Ahorro', viaje: 'Viaje o plan', cerrado: 'Cerrado' };
+  var rep = M.cfg.reparto || {}, cobro = +M.cfg.cobro || 0;
+  var fsb = M.sobres.map(function (x) {
+    var c = M.calc(x), extra = rep[x.id] ? Math.round(rep[x.id]) + ' % del dinero extra' : '';
+    if (x.tipo === 'viaje' && x.meta) extra = 'Presupuesto ' + x.meta.toFixed(2).replace('.', ',') + ' €' + (x.metaNombre ? ' · hasta ' + x.metaNombre : '');
+    if (x.tipo === 'ahorro' && x.meta) extra = 'Meta ' + x.meta.toFixed(2).replace('.', ',') + ' €' + (x.metaNombre ? ' (' + x.metaNombre + ')' : '');
+    return ['●', x.nombre, TS[x.tipo] || x.tipo, x.tipo === 'gasto' || x.tipo === 'ahorro' ? c.mes : '', c.total, extra];
+  });
+  var n = tabla_(s, 6, 2, ['', 'Nombre', 'Tipo', 'Cada mes', 'Tienes', 'Notas'], fsb, [null, null, null, EUR_, EUR_, null]);
+  s.setRowHeight(6, 28); if (fsb.length) s.setRowHeights(7, fsb.length, 28);
+  M.sobres.forEach(function (x, i) { s.getRange(7 + i, 2).setFontColor(x.hex).setFontSize(14).setHorizontalAlignment('center'); s.getRange(7 + i, 3).setFontWeight('bold'); });
+  var suma = M.sobres.reduce(function (a, x) { return a + (x.tipo === 'gasto' || x.tipo === 'ahorro' ? M.calc(x).mes : 0); }, 0);
+  var f0 = 7 + n + 1;
+  s.getRange(f0, 2, 3, 6).setBackground(C_.blanco);
+  s.getRange(f0, 3).setValue('Cobras al mes').setFontColor(C_.gris);
+  s.getRange(f0, 5).setValue(cobro).setNumberFormat(EUR_).setFontWeight('bold');
+  s.getRange(f0 + 1, 3).setValue('Repartido en sobres').setFontColor(C_.gris);
+  s.getRange(f0 + 1, 5).setValue(suma).setNumberFormat(EUR_).setFontWeight('bold');
+  s.getRange(f0 + 2, 3).setValue(cobro - suma >= 0 ? 'Sin repartir' : 'Te pasas en').setFontColor(C_.gris);
+  s.getRange(f0 + 2, 5).setValue(Math.abs(cobro - suma)).setNumberFormat(EUR_).setFontWeight('bold').setFontColor(cobro - suma >= 0 ? C_.verde : C_.rojo);
+  s.getRange(f0, 2, 3, 6).setBorder(true, true, true, true, false, false, C_.linea, SpreadsheetApp.BorderStyle.SOLID);
+  s.getRange(f0, 5, 3, 1).setHorizontalAlignment('right');
+
+  /* ocultar lo técnico (la app lo necesita: no borrar ni renombrar) */
+  ['Movimientos', 'Sobres', 'Config', 'Datos'].forEach(function (nm) { var t = ss.getSheetByName(nm); if (t) { t.setTabColor('#9aa5a0'); if (!t.isSheetHidden()) t.hideSheet(); } });
+  var mv = ss.getSheetByName('Movimientos');
+  if (mv) mv.getRange('A1').setNote('Pestaña técnica de la app. No la borres ni la cambies: lo bonito está en Resumen, Historial y Mis sobres.');
+  ['Hoja 1', 'Hoja1', 'Sheet1'].forEach(function (nm) { var t = ss.getSheetByName(nm); if (t && t.getLastRow() === 0 && t.getCharts().length === 0) ss.deleteSheet(t); });
+
+  /* orden y colores */
+  var r0 = ss.getSheetByName('Resumen');
+  [[r0, C_.verde], [h, '#2a78d6'], [s, '#eda100']].forEach(function (p, i) { if (!p[0]) return; p[0].setTabColor(p[1]); ss.setActiveSheet(p[0]); ss.moveActiveSheet(i + 1); });
 }

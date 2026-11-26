@@ -109,8 +109,43 @@ function salida_(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function doGet() {
+function doGet(e) {
+  if (e && e.parameter && e.parameter.lista) return ContentService.createTextOutput(listaAtajo_().join('\n'));
   return salida_(estado_());
+}
+
+/* ---- Atajo del iPhone: apunta solos los pagos con Apple Pay ---- */
+var NO_APUNTAR_ = 'No apuntar';
+function listaAtajo_() {
+  var e = estado_();
+  return e.sobres.filter(function (s) { return s.tipo === 'gasto' || s.tipo === 'viaje'; })
+    .sort(function (a, b) { return a.orden - b.orden; }).map(function (s) { return s.nombre; }).concat([NO_APUNTAR_]);
+}
+function importeAtajo_(v) {
+  var t = String(v == null ? '' : v).replace(/[^\d,.\-]/g, '');
+  if (t.indexOf(',') >= 0 && t.indexOf('.') >= 0) {
+    if (t.lastIndexOf(',') > t.lastIndexOf('.')) t = t.replace(/\./g, '').replace(',', '.'); else t = t.replace(/,/g, '');
+  } else if (t.indexOf(',') >= 0) t = t.replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) t = t.replace(/\./g, '');
+  var n = Math.abs(parseFloat(t));
+  return isFinite(n) ? Math.round(n * 100) / 100 : NaN;
+}
+function euros_(n) { return n.toFixed(2).replace('.', ',') + ' €'; }
+function atajo_(body) {
+  var nombre = String(body.sobre || '').trim();
+  if (!nombre || nombre === NO_APUNTAR_) return 'Vale, no lo apunto.';
+  var imp = importeAtajo_(body.importe);
+  if (!(imp > 0)) return '⚠️ No he entendido el importe (' + body.importe + '). Apúntalo en la app.';
+  var e = estado_(), s = null;
+  e.sobres.forEach(function (x) { if (!s && x.nombre.toLowerCase() === nombre.toLowerCase()) s = x; });
+  if (!s) return '⚠️ No encuentro el sobre «' + nombre + '». Apúntalo en la app.';
+  var ahora = new Date(), id = 'ap-' + ahora.getTime().toString(36);
+  hoja_('m').appendRow([id, Utilities.formatDate(ahora, TZ_, 'yyyy-MM-dd'), 'gasto', imp, s.nombre,
+    String(body.tienda || 'Apple Pay').trim() || 'Apple Pay', s.id, ahora.getTime(), '', '', JSON.stringify({ applepay: true })]);
+  SpreadsheetApp.flush();
+  var txt = '✅ ' + euros_(imp) + ' en ' + s.nombre;
+  try { var M = modelo_(), sb = M.sobres.filter(function (x) { return x.id === s.id; })[0]; if (sb) txt += ' · te quedan ' + euros_(M.calc(sb).queda); } catch (err) {}
+  return txt;
 }
 
 function doPost(e) {
@@ -118,6 +153,7 @@ function doPost(e) {
   lock.waitLock(25000);
   try {
     var body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    if (body.atajo) return ContentService.createTextOutput(atajo_(body));
     var ops = Array.isArray(body.ops) ? body.ops : [];
     var hm = hoja_('m');
     hoja_('s'); hoja_('c');

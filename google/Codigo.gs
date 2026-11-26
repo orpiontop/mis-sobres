@@ -182,9 +182,11 @@ function diasHasta_(s, hoy) { var a = s.split('-'), b = hoy.split('-'); return M
 
 function modelo_() {
   var e = estado_(), cfg = e.cfg || {}, cob = cfg.cobros || {};
+  /* El mes nuevo solo empieza cuando pulsas «He cobrado» en la app. */
+  var base = typeof cfg.inicio === 'number' ? cfg.inicio : idxAuto_(hoy_());
   function inicioDe(k) { return cob[k] || inicioAuto_(k); }
-  function idxDe(s) { var k = idxAuto_(s); if (cob[k] && s < cob[k]) return k - 1; if (cob[k + 1] && s >= cob[k + 1]) return k + 1; return k; }
-  var hoy = hoy_(), now = idxDe(hoy), ini = Math.min(typeof cfg.inicio === 'number' ? cfg.inicio : now, now);
+  function idxDe(s) { if (s < inicioAuto_(base)) return Math.min(idxAuto_(s), base - 1); var k = base; while (cob[k + 1] && s >= cob[k + 1]) k++; return k; }
+  var hoy = hoy_(), now = idxDe(hoy), ini = Math.min(base, now);
   var movs = e.movs.filter(function (m) { return /^\d{4}-\d{2}-\d{2}$/.test(m.fecha); });
   movs.forEach(function (m) { m.k = idxDe(m.fecha); });
   var sobres = e.sobres.slice().sort(function (a, b) { return a.orden - b.orden; });
@@ -286,7 +288,7 @@ function actualizarResumen() {
   h.setRowHeight(2, 40); h.setRowHeight(3, 22);
   h.getRange('B2:M3').setBackground(C_.verde);
   h.getRange('B2:H2').merge().setValue('Mis sobres').setFontSize(22).setFontWeight('bold').setFontColor(C_.blanco);
-  h.getRange('B3:H3').merge().setValue('Mes: ' + corto_(inicio) + ' – ' + corto_(fin) + '   ·   Cobras el ' + corto_(prox) + ' (en ' + diasHasta_(prox, hoy) + ' días)').setFontColor('#d7ebe3').setFontSize(10);
+  h.getRange('B3:H3').merge().setValue('Mes: ' + corto_(inicio) + ' – ' + (diasHasta_(prox, hoy) <= 0 ? 'hoy' : corto_(fin)) + '   ·   ' + (diasHasta_(prox, hoy) <= 0 ? 'Sueldo previsto el ' + corto_(prox) + ': pulsa «He cobrado» en la app' : 'Cobras el ' + corto_(prox) + ' (en ' + diasHasta_(prox, hoy) + ' días)')).setFontColor('#d7ebe3').setFontSize(10);
   h.getRange('I2:M3').merge().setValue('Actualizado: ' + Utilities.formatDate(new Date(), TZ_, 'd MMM, HH:mm')).setFontColor('#d7ebe3').setFontSize(9).setHorizontalAlignment('right').setVerticalAlignment('bottom');
 
   /* tarjetas */

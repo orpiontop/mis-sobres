@@ -17,11 +17,13 @@ function diaCobro(y,m){var d=new Date(y,m+1,0).getDate(),n=0;for(;d>0;d--){var w
 function idxAuto(str){var p=str.split("-"),y=+p[0],m=+p[1]-1,d=+p[2];return y*12+m-(d>=diaCobro(y,m)?0:1);}
 function inicioAuto(idx){var y=Math.floor(idx/12),m=idx%12;return y+"-"+pad(m+1)+"-"+pad(diaCobro(y,m));}
 function addDias(str,n){var p=str.split("-"),d=new Date(+p[0],+p[1]-1,+p[2]+n);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
-/* Si pulsas «He cobrado», el mes empieza ese día; si no, empieza solo el antepenúltimo día. */
+/* El mes nuevo SOLO empieza cuando pulsas «He cobrado». Hasta entonces sigues en el mes anterior. */
 function cobros(){return (S.cfg&&S.cfg.cobros)||{};}
-function claveCobro(fecha){return idxAuto(addDias(fecha,7));}
-function inicioDe(k){return cobros()[k]||inicioAuto(k);}
-function idxDe(str){var k=idxAuto(str),c=cobros();if(c[k]&&str<c[k])return k-1;if(c[k+1]&&str>=c[k+1])return k+1;return k;}
+function base(){return S.cfg&&typeof S.cfg.inicio==="number"?S.cfg.inicio:idxAuto(hoyStr());}
+function claveCobro(fecha){return idxDe(fecha)+1;}
+function inicioDe(k){var c=cobros();if(c[k])return c[k];return inicioAuto(k);}
+function idxDe(str){var b=base(),c=cobros();if(str<inicioAuto(b))return Math.min(idxAuto(str),b-1);var k=b;while(c[k+1]&&str>=c[k+1])k++;return k;}
+function cobrado(k){return k<=base()||!!cobros()[k];}
 function corto(str){var p=str.split("-");return (+p[2])+" "+MES[+p[1]-1];}
 function antes(str){var p=str.split("-"),d=new Date(+p[0],+p[1]-1,+p[2]-1);return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());}
 function diasHasta(str){var p=str.split("-"),a=new Date(+p[0],+p[1]-1,+p[2]),h=new Date();h=new Date(h.getFullYear(),h.getMonth(),h.getDate());return Math.round((a-h)/864e5);}
@@ -172,6 +174,7 @@ function aplicarFijos(){
   });
   if(ops.length){hacerVarios(ops);toast(ops.length===1?"Gasto fijo apuntado: "+ops[0].mov.nota:ops.length+" gastos fijos apuntados");}
 }
+function finTxt(k){return k>=ahora()?"hoy":corto(antes(inicioDe(k+1)));}
 function diasRestantes(){return Math.max(1,diasHasta(inicioDe(ahora()+1)));}
 
 /* ---------- pintar ---------- */
@@ -228,7 +231,7 @@ function pintar(){
   });
   $("tTotal").textContent=eur.format(tot);
   var prox=inicioDe(ahora()+1),d=diasHasta(prox);
-  $("tCobro").textContent="Cobras el "+corto(prox)+(d===0?" (hoy)":d===1?" (mañana)":" (en "+d+" días)");
+  $("tCobro").textContent=d<=0?"Sueldo previsto el "+corto(prox)+" · pulsa «He cobrado» cuando llegue":"Cobras el "+corto(prox)+(d===1?" (mañana)":" (en "+d+" días)");
   $("tDia").textContent=tot>0?"≈ "+eur.format(r2(tot/dias))+" al día":"";
   $("tAhorro").textContent="Ahorrado: "+eur.format(tAh);
   var cs=cuentas(),neto=r2(cs.reduce(function(a,c){return a+c.saldo;},0));
@@ -238,12 +241,11 @@ function pintar(){
   pintarRapidos();pintarFiltros();pintarResumen();pintarMovs();aviso();
 }
 function pintarCobro(){
-  var hoy=hoyStr(),k=ahora(),c=cobros(),box=$("cobroBox"),txt="";
-  var prox=inicioAuto(k+1),actual=inicioAuto(k);
-  var suave=false;S.cobroKey=null;S.cobroConfirmar=false;
-  if(!c[k+1]&&hoy>=addDias(prox,-6)){txt="¿Ya te ha llegado el sueldo?";S.cobroKey=k+1;}
-  else if(!c[k]&&hoy>=actual&&hoy<=addDias(actual,6)&&k>primero()){txt="El mes empezó solo el "+corto(actual)+". ¿Te ha llegado ya el sueldo?";S.cobroKey=k;}
-  else if(hoy>addDias(inicioDe(k),10)){txt="¿Te han pagado antes de tiempo?";S.cobroKey=k+1;S.cobroConfirmar=true;suave=true;}
+  var hoy=hoyStr(),k=ahora(),prox=inicioAuto(k+1);
+  var suave=false,txt="";S.cobroKey=k+1;S.cobroConfirmar=false;
+  if(hoy>=addDias(prox,-6))txt="¿Ya te ha llegado el sueldo?";
+  else if(hoy>addDias(inicioDe(k),10)){txt="¿Te han pagado antes de tiempo?";S.cobroConfirmar=true;suave=true;}
+  else S.cobroKey=null;
   $("bCobrado").hidden=!txt;$("bCobrado").classList.toggle("fuerte",!!txt&&!suave);$("bCobrado").textContent="He cobrado";S.cobroArmado=false;
 }
 function heCobrado(){
@@ -329,7 +331,7 @@ function pintarRapidos(){
 function pintarFiltros(){
   var fc=$("fCiclo"),now=ahora(),ini=primero(),prev=S.ciclo==null?now:S.ciclo;
   fc.textContent="";
-  for(var i=now;i>=ini;i--){var o=el("option",null,(i===now?"Este mes · ":"")+corto(inicioDe(i))+" – "+corto(antes(inicioDe(i+1))));o.value=i;fc.appendChild(o);}
+  for(var i=now;i>=ini;i--){var o=el("option",null,(i===now?"Este mes · ":"")+corto(inicioDe(i))+" – "+finTxt(i));o.value=i;fc.appendChild(o);}
   var all=el("option",null,"Todo");all.value="todo";fc.appendChild(all);
   fc.value=String(prev);if(fc.value!==String(prev))fc.value=String(now);
   var fs=$("fSobre"),ps=fs.value;fs.textContent="";
@@ -359,7 +361,7 @@ function pintarResumen(){
   box.appendChild(tile("Ahorrado",eur.format(r.ahorrado)));
   if(r.gs.length)box.appendChild(tile(r.todo||r.acabado?"Sobró (a Sobrantes)":"Te sobra ahora",eur.format(r.sobra),r.sobra<0?"neg":""));
 }
-function periodoTxt(r){if(r.todo)return "Todo";var k=r.ks[0];return corto(inicioDe(k))+" – "+corto(antes(inicioDe(k+1)));}
+function periodoTxt(r){if(r.todo)return "Todo";var k=r.ks[0];return corto(inicioDe(k))+" – "+finTxt(k);}
 function abrirExp(){
   var r=datosResumen(),L=[],fs=$("fSobre").value;
   L.push("MIS SOBRES · "+periodoTxt(r)+(fs?" · "+nombreSobre(fs):""));
